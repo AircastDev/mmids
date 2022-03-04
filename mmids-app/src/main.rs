@@ -40,7 +40,7 @@ use tokio::io::AsyncReadExt;
 use tokio::sync::mpsc::UnboundedSender;
 use tokio::sync::oneshot::{channel, Sender};
 use tracing::{info, warn};
-use tracing_subscriber::{fmt, layer::SubscriberExt}
+use tracing_subscriber::{fmt, layer::SubscriberExt};
 
 const RTMP_RECEIVE: &str = "rtmp_receive";
 const RTMP_WATCH: &str = "rtmp_watch";
