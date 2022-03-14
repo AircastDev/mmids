@@ -7,6 +7,7 @@ use futures::FutureExt;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
+use tokio_util::sync::CancellationToken;
 use tracing::{debug, error, info};
 
 /// Starts a new instance of a socket manager task.  A socket manager can be requested to open
@@ -34,6 +35,7 @@ enum SocketManagerFutureResult {
 
 struct OpenPort {
     response_channel: UnboundedSender<TcpSocketResponse>,
+    cancellation_token: CancellationToken,
 }
 
 struct SocketManager {
@@ -115,8 +117,10 @@ impl SocketManager {
                     let _ = response_channel.send(message);
                 } else {
                     debug!(port = port, use_tls = use_tls, "TCP port being opened");
+                    let cancellation_token = CancellationToken::new();
                     let details = OpenPort {
                         response_channel: response_channel.clone(),
+                        cancellation_token: cancellation_token.clone(),
                     };
 
                     self.open_ports.insert(port, details);
@@ -126,12 +130,28 @@ impl SocketManager {
                         response_channel: response_channel.clone(),
                         use_tls,
                         tls_options: tls_options.clone(),
+                        cancellation_token,
                     });
 
                     self.futures
                         .push(listener_shutdown_future(port, listener_shutdown).boxed());
 
                     let _ = response_channel.send(TcpSocketResponse::RequestAccepted {});
+                }
+            }
+            TcpSocketRequest::ClosePort { port: Some(port) } => {
+                match self.open_ports.remove(&port) {
+                    None => {
+                        error!(port, "Failed to close port as it is not open");
+                    }
+                    Some(details) => {
+                        details.cancellation_token.cancel();
+                    }
+                }
+            }
+            TcpSocketRequest::ClosePort { port: None } => {
+                for (_, details) in self.open_ports.drain() {
+                    details.cancellation_token.cancel();
                 }
             }
         }

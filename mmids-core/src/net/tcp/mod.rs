@@ -52,6 +52,12 @@ pub enum TcpSocketRequest {
         /// for notifications
         response_channel: mpsc::UnboundedSender<TcpSocketResponse>,
     },
+    /// Request for the server to stop listening on either a specific TCP port or all ports. This
+    /// will not close any active connections, but will stop accepting new connections.
+    ClosePort {
+        /// TCP port to close, or None to close all
+        port: Option<u16>,
+    },
 }
 
 #[derive(Debug)]

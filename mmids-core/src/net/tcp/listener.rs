@@ -10,6 +10,7 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt, ReadHalf, WriteHalf};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
 use tokio_native_tls::TlsAcceptor;
+use tokio_util::sync::CancellationToken;
 use tracing::{error, info, instrument, warn};
 use uuid::Uuid;
 
@@ -36,6 +37,10 @@ pub struct ListenerParams {
 
     /// The channel in which to send notifications of port activity to
     pub response_channel: UnboundedSender<TcpSocketResponse>,
+
+    /// Cancellation token to stop the listener from accepting new requests, but continue handling
+    /// existing ones.
+    pub cancellation_token: CancellationToken,
 }
 
 enum ReadSocket {
@@ -66,6 +71,7 @@ async fn listen(params: ListenerParams, _self_disconnection_signal: UnboundedRec
         response_channel,
         use_tls,
         tls_options,
+        cancellation_token,
     } = params;
 
     let tls = if let Some(tls) = tls_options.as_ref() {
@@ -112,6 +118,10 @@ async fn listen(params: ListenerParams, _self_disconnection_signal: UnboundedRec
             },
 
             _ = disconnect.closed() => {
+                break;
+            }
+
+            _ = cancellation_token.cancelled() => {
                 break;
             }
         }
