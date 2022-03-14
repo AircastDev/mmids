@@ -51,6 +51,8 @@ pub const REACTOR_NAME: &'static str = "reactor";
 pub struct RtmpWatchStepGenerator {
     rtmp_endpoint_sender: UnboundedSender<RtmpEndpointRequest>,
     reactor_manager: UnboundedSender<ReactorManagerRequest>,
+    default_port: u16,
+    default_rtmps_port: u16,
 }
 
 struct StreamWatchers {
@@ -141,7 +143,21 @@ impl RtmpWatchStepGenerator {
         RtmpWatchStepGenerator {
             rtmp_endpoint_sender,
             reactor_manager,
+            default_port: 1935,
+            default_rtmps_port: 443,
         }
+    }
+
+    /// Change the default port used for RTMP connections (default is 1935).
+    pub fn with_default_port(mut self, port: u16) -> Self {
+        self.default_port = port;
+        self
+    }
+
+    /// Change the default port used for RTMPS connections (default is 443).
+    pub fn with_default_rtmps_port(mut self, port: u16) -> Self {
+        self.default_rtmps_port = port;
+        self
     }
 }
 
@@ -164,9 +180,9 @@ impl StepGenerator for RtmpWatchStepGenerator {
 
             _ => {
                 if use_rtmps {
-                    443
+                    self.default_rtmps_port
                 } else {
-                    1935
+                    self.default_port
                 }
             }
         };

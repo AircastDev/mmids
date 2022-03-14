@@ -107,10 +107,7 @@ impl TestContext {
         let (reactor_sender, reactor_receiver) = unbounded_channel();
         let (rtmp_sender, rtmp_receiver) = unbounded_channel();
 
-        let generator = RtmpWatchStepGenerator {
-            reactor_manager: reactor_sender,
-            rtmp_endpoint_sender: rtmp_sender,
-        };
+        let generator = RtmpWatchStepGenerator::new(rtmp_sender, reactor_sender);
 
         let step_context = StepTestContext::new(Box::new(generator), definition)?;
 
