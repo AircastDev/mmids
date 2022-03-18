@@ -9,7 +9,6 @@ use std::sync::Arc;
 use tokio::io::{AsyncReadExt, AsyncWriteExt, ReadHalf, WriteHalf};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
-use tokio_native_tls::TlsAcceptor;
 use tokio_util::sync::CancellationToken;
 use tracing::{error, info, instrument, warn};
 use uuid::Uuid;
@@ -45,12 +44,19 @@ pub struct ListenerParams {
 
 enum ReadSocket {
     Bare(ReadHalf<TcpStream>),
+    #[cfg(feature = "tls-native")]
     Tls(ReadHalf<tokio_native_tls::TlsStream<TcpStream>>),
 }
 
 enum WriteSocket {
     Bare(WriteHalf<TcpStream>),
+    #[cfg(feature = "tls-native")]
     Tls(WriteHalf<tokio_native_tls::TlsStream<TcpStream>>),
+}
+
+enum TlsAcceptor {
+    #[cfg(feature = "tls-native")]
+    NativeTls(tokio_native_tls::TlsAcceptor),
 }
 
 /// Starts listening for TCP connections on the specified port.  It returns a channel which
@@ -75,16 +81,27 @@ async fn listen(params: ListenerParams, _self_disconnection_signal: UnboundedRec
     } = params;
 
     let tls = if let Some(tls) = tls_options.as_ref() {
-        let identity = tls.certificate.clone();
-        let tls_acceptor = match native_tls::TlsAcceptor::builder(identity).build() {
-            Ok(x) => x,
-            Err(e) => {
-                error!("Failed to build tls acceptor: {:?}", e);
-                return;
-            }
-        };
+        #[cfg(feature = "tls-native")]
+        {
+            let identity = tls.certificate.clone();
+            let tls_acceptor = match native_tls::TlsAcceptor::builder(identity).build() {
+                Ok(x) => x,
+                Err(e) => {
+                    error!("Failed to build tls acceptor: {:?}", e);
+                    return;
+                }
+            };
 
-        Some(tokio_native_tls::TlsAcceptor::from(tls_acceptor))
+            Some(TlsAcceptor::NativeTls(tokio_native_tls::TlsAcceptor::from(
+                tls_acceptor,
+            )))
+        }
+
+        #[cfg(not(feature = "tls-native"))]
+        {
+            warn!("TLS support is not enabled");
+            None
+        }
     } else {
         None
     };
@@ -301,17 +318,22 @@ async fn split_socket(
             Ok((ReadSocket::Bare(reader), WriteSocket::Bare(writer)))
         }
 
-        Some(tls) => {
+        #[cfg(feature = "tls-native")]
+        Some(TlsAcceptor::NativeTls(tls)) => {
             let tls_stream = tls.accept(socket).await?;
             let (reader, writer) = tokio::io::split(tls_stream);
             Ok((ReadSocket::Tls(reader), WriteSocket::Tls(writer)))
         }
+
+        #[cfg(not(feature = "tls-native"))]
+        Some(_) => Err("TLS support is not enabled".into()),
     }
 }
 
 async fn read_buf(reader: &mut ReadSocket, buffer: &mut BytesMut) -> std::io::Result<usize> {
     match reader {
         ReadSocket::Bare(socket) => socket.read_buf(buffer).await,
+        #[cfg(feature = "tls-native")]
         ReadSocket::Tls(socket) => socket.read_buf(buffer).await,
     }
 }
@@ -319,6 +341,7 @@ async fn read_buf(reader: &mut ReadSocket, buffer: &mut BytesMut) -> std::io::Re
 async fn write_packet(writer: &mut WriteSocket, packet: OutboundPacket) -> std::io::Result<()> {
     match writer {
         WriteSocket::Bare(socket) => socket.write_all(packet.bytes.as_ref()).await,
+        #[cfg(feature = "tls-native")]
         WriteSocket::Tls(socket) => socket.write_all(packet.bytes.as_ref()).await,
     }
 }

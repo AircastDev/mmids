@@ -9,6 +9,9 @@ license = "MIT"
 readme = "Readme.md"
 documentation = "https://kalldrexx.github.io/mmids/"
 
+[features]
+tls-native = ["native-tls", "tokio-native-tls"]
+
 [dependencies]
 tokio = { version = "1.15", features = ["full"] }
 futures = "0.3"
@@ -20,8 +23,6 @@ thiserror = "1.0"
 pest = "2.1"
 pest_derive = "2.1"
 cidr-utils = "0.5.5"
-tokio-native-tls = "0.3"
-native-tls = "0.2"
 tracing = { version = "0.1", features = ["log"] }
 hyper = { version = "0.14", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }
@@ -31,4 +32,7 @@ async-recursion = "0.3.2"
 byteorder = "1.4.3"
 anyhow = "1.0.54"
 tokio-util = "0.7"
+
+tokio-native-tls = { version = "0.3", optional = true }
+native-tls = { version = "0.2", optional = true }
 
