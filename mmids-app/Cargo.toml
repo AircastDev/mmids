@@ -4,7 +4,7 @@ version = "1.1.1"
 edition = "2018"
 
 [dependencies]
-mmids-core = { path = "../mmids-core" }
+mmids-core = { path = "../mmids-core", features = ["tls-native"] }
 mmids-gstreamer = { path = "../mmids-gstreamer" }
 tokio = { version = "1.15", features = ["full"] }
 tracing = "0.1"
