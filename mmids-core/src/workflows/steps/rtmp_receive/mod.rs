@@ -70,7 +70,7 @@ struct RtmpReceiverStep {
 impl StepFutureResult for FutureResult {}
 
 enum FutureResult {
-    RtmpEndpointGone,
+    RtmpEndpointDroppedRegistration,
     ReactorManagerGone,
     ReactorGone,
     RtmpEndpointResponseReceived(
@@ -446,10 +446,12 @@ impl WorkflowStep for RtmpReceiverStep {
             };
 
             match future_result {
-                FutureResult::RtmpEndpointGone => {
-                    error!("Rtmp receive step stopping as the rtmp endpoint is gone");
+                FutureResult::RtmpEndpointDroppedRegistration => {
+                    error!(
+                        "Rtmp receive step stopping as the rtmp endpoint dropped the registration"
+                    );
                     self.status = StepStatus::Error {
-                        message: "Rtmp receive step stopping as the rtmp endpoint is gone"
+                        message: "Rtmp receive step stopping as the rtmp endpoint dropped the registration"
                             .to_string(),
                     };
 
@@ -549,7 +551,7 @@ async fn wait_for_rtmp_endpoint_response(
     mut receiver: UnboundedReceiver<RtmpEndpointPublisherMessage>,
 ) -> Box<dyn StepFutureResult> {
     let notification = match receiver.recv().await {
-        None => FutureResult::RtmpEndpointGone,
+        None => FutureResult::RtmpEndpointDroppedRegistration,
         Some(message) => FutureResult::RtmpEndpointResponseReceived(message, receiver),
     };
 
