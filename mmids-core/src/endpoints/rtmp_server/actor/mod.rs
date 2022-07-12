@@ -1325,21 +1325,6 @@ fn handle_connection_request_publish(
             latest_audio_sequence_header: None,
         });
 
-    // Is someone already publishing on this stream key?
-    if let Some(id) = &stream_key_connections.publisher {
-        error!(
-            "Connection {} requested publishing to '{}/{}', but connection {} is already \
-        publishing to this stream key",
-            connection_id, rtmp_app, stream_key, id
-        );
-
-        let _ = connection
-            .response_channel
-            .send(ConnectionResponse::RequestRejected);
-
-        return None;
-    }
-
     if !is_ip_allowed(&connection.socket_address, &registrant.ip_restrictions) {
         error!(
             "Connection {} requested publishing to '{}/{}', but the client's ip address of '{}' \
@@ -1382,6 +1367,28 @@ fn handle_connection_request_publish(
 
         return Some(future);
     }
+
+    // Is someone already publishing on this stream key?
+    let connection = if let Some(id) = &stream_key_connections.publisher {
+        warn!(
+            "Connection {} requested publishing to '{}/{}', but connection {} is already \
+        publishing to this stream key. Favouring this connection instead.",
+            connection_id, rtmp_app, stream_key, id
+        );
+
+        if let Some(existing_connection) = port_map.connections.get(id) {
+            let _ = existing_connection
+                .response_channel
+                .send(ConnectionResponse::Disconnect);
+        };
+
+        port_map
+            .connections
+            .get_mut(connection_id)
+            .expect("connection is already determined to exist")
+    } else {
+        connection
+    };
 
     // All good to publish
     stream_key_connections.publisher = Some(connection_id.clone());
