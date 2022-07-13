@@ -156,6 +156,11 @@ pub enum RtmpEndpointRequest {
         /// The stream key the registrant had registered for
         rtmp_stream_key: StreamKeyRegistration,
     },
+
+    DisconnectClient {
+        port: u16,
+        connection_id: ConnectionId,
+    },
 }
 
 /// Response to approval/validation requests

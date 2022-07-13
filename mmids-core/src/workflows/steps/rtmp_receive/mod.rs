@@ -525,7 +525,12 @@ impl WorkflowStep for RtmpReceiverStep {
                             connection_id
                         );
 
-                        // TODO: Need some way to disconnect publishers
+                        let _ =
+                            self.rtmp_endpoint_sender
+                                .send(RtmpEndpointRequest::DisconnectClient {
+                                    port: self.port,
+                                    connection_id,
+                                });
                     }
                 }
 

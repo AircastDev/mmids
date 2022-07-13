@@ -19,6 +19,11 @@ pub struct ReactorExecutionResult {
 pub trait ReactorExecutor {
     /// Requests the definition of a workflow based on a stream name
     fn get_workflow(&self, stream_name: String) -> BoxFuture<'static, ReactorExecutionResult>;
+
+    /// Requests the definition of a workflow based on a stream name for an interval update.
+    fn update_workflow(&self, stream_name: String) -> BoxFuture<'static, ReactorExecutionResult> {
+        self.get_workflow(stream_name)
+    }
 }
 
 /// Allows generating a reactor executor using parameters from a reactor definition

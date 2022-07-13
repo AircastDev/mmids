@@ -164,7 +164,7 @@ impl Actor {
                         .cached_workflows_for_stream_name
                         .contains_key(&stream_name)
                     {
-                        let future = self.executor.get_workflow(stream_name.clone());
+                        let future = self.executor.update_workflow(stream_name.clone());
                         self.futures
                             .push(wait_for_executor_response(stream_name, future).boxed());
                     }

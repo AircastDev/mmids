@@ -444,6 +444,19 @@ impl RtmpServerEndpointActor {
                     }
                 }
             }
+
+            RtmpEndpointRequest::DisconnectClient {
+                port,
+                connection_id,
+            } => {
+                if let Some(port_map) = self.ports.get(&port) {
+                    if let Some(connection) = port_map.connections.get(&connection_id) {
+                        let _ = connection
+                            .response_channel
+                            .send(ConnectionResponse::Disconnect);
+                    }
+                }
+            }
         }
     }
 
