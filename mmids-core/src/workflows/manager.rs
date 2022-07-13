@@ -14,7 +14,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
 use tokio::sync::oneshot::Sender;
-use tracing::{info, instrument, warn};
+use tracing::{debug, info, instrument, warn};
 
 /// Requests an action be taken by the workflow manager
 #[derive(Debug)]
@@ -159,7 +159,7 @@ impl Actor {
         match request.operation {
             WorkflowManagerRequestOperation::UpsertWorkflow { definition } => {
                 if let Some(sender) = self.workflows.get_mut(&definition.name) {
-                    info!(
+                    debug!(
                         workflow_name = %definition.name,
                         "Updating existing workflow '{}' with new definition", definition.name,
                     );

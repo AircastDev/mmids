@@ -8,7 +8,7 @@ use futures::{FutureExt, StreamExt};
 use std::collections::{HashMap, HashSet};
 use std::time::Duration;
 use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
-use tracing::{info, instrument, warn};
+use tracing::{debug, info, instrument, warn};
 
 /// Requests that can be made to a reactor
 #[derive(Debug)]
@@ -232,7 +232,7 @@ impl Actor {
                 .map(|w| w.name.clone())
                 .collect::<HashSet<_>>();
 
-            info!(
+            debug!(
                 stream_name = %stream_name,
                 workflow_count = %result.workflows_returned.len(),
                 routed_count = %routed_workflow_names.len(),
